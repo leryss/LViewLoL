@@ -10,3 +10,5 @@ LView/x64/
 /.vs/LViewLoL2/v16
 /.vs/ProjectSettings.json
 /.vs
+/GameplayScripts/commons/__pycache__
+/GameplayScripts/__pycache__

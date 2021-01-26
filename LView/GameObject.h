@@ -41,7 +41,6 @@ public:
 	float                 GetAttackSpeedRatio() const;
 	float                 GetBaseMovementSpeed() const;
 	float                 GetBaseAttackSpeed() const;
-	float                 GetBaseAttackRange() const;
 	float                 GetAttackRange() const;
 	float                 GetHpBarHeight() const;
 				          
@@ -63,6 +62,7 @@ public:
 	float                 atkSpeedMulti;
 	float                 movementSpeed;
 	float                 duration;
+	float                 baseAttackRange;
 				          
 	short                 objectIndex;
 	short                 team;
@@ -97,7 +97,7 @@ public:
 	Spell*                GetSummonerSpell(SummonerSpellType type);
 			              
 	bool                  IsRanged();
-	list                  ItemsToPyList();
+	boost::python::list                  ItemsToPyList();
 				          
 	Spell                 Q = Spell(SpellSlot::Q);
 	Spell                 W = Spell(SpellSlot::W);

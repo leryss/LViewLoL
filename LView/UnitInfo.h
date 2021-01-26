@@ -71,7 +71,6 @@ public:
 	std::string name;
 	float healthBarHeight;
 	float baseMovementSpeed;
-	float baseAttackRange;
 	float baseAttackSpeed;
 	float attackSpeedRatio;
 	

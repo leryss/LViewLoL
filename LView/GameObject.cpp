@@ -64,13 +64,8 @@ float GameObject::GetBaseAttackSpeed() const
 	return unitInfo->baseAttackSpeed;
 }
 
-float GameObject::GetBaseAttackRange() const
-{
-	return unitInfo->baseAttackRange;
-}
-
 float GameObject::GetAttackRange()  const {
-	return GetBaseAttackRange() + GetGameplayRadius();
+	return baseAttackRange + GetGameplayRadius();
 }
 
 float GameObject::GetHpBarHeight() const
@@ -115,6 +110,7 @@ void GameObject::LoadFromMem(DWORD base, HANDLE hProcess, bool deepLoad) {
 	memcpy(&atkSpeedMulti, &buff[Offsets::ObjAtkSpeedMulti], sizeof(float));
 	memcpy(&movementSpeed, &buff[Offsets::ObjMoveSpeed],     sizeof(float));
 	memcpy(&networkId,     &buff[Offsets::ObjNetworkID],     sizeof(DWORD));
+	memcpy(&baseAttackRange, &buff[Offsets::ObjAtkRange], sizeof(float));
 
 	// Check if alive
 	DWORD spawnCount;
@@ -200,7 +196,7 @@ Spell* GameObject::GetSummonerSpell(SummonerSpellType type) {
 }
 
 bool GameObject::IsRanged() {
-	return GetBaseAttackRange() >= 300.f;
+	return baseAttackRange >= 300.f;
 }
 
 list GameObject::ItemsToPyList() {

@@ -33,6 +33,7 @@ public:
 	static int ObjAtkSpeedMulti;
 	static int ObjItemList;
 	static int ObjSrcIndex;
+	static int ObjAtkRange;
 
 	static int ItemListItem;
 	static int ItemInfo;

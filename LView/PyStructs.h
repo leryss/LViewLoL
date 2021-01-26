@@ -104,7 +104,7 @@ BOOST_PYTHON_MODULE(lview) {
 		.def_readonly("atk_speed_ratio",      &GameObject::GetAttackSpeedRatio)
 		.def_readonly("base_ms",              &GameObject::GetBaseMovementSpeed)
 		.def_readonly("base_atk_speed",       &GameObject::GetBaseAttackSpeed)
-		.def_readonly("base_atk_range",       &GameObject::GetBaseAttackRange)
+		.def_readonly("base_atk_range",       &GameObject::baseAttackRange)
 		.def_readonly("atk_range",            &GameObject::GetAttackRange)
 		.def_readonly("is_ranged",            &GameObject::IsRanged)
 

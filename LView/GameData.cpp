@@ -85,7 +85,6 @@ void GameData::LoadUnitData(std::string&  path)
 		UnitInfo* unit = new UnitInfo();
 		unit->acquisitionRange         = (float)unitObj.GetDouble("acquisitionRange");
 		unit->attackSpeedRatio         = (float)unitObj.GetDouble("attackSpeedRatio");
-		unit->baseAttackRange          = (float)unitObj.GetDouble("attackRange");
 		unit->baseAttackSpeed          = (float)unitObj.GetDouble("attackSpeed");
 		unit->baseMovementSpeed        = (float)unitObj.GetDouble("baseMoveSpeed");
 		unit->basicAttackMissileSpeed  = (float)unitObj.GetDouble("basicAtkMissileSpeed");
