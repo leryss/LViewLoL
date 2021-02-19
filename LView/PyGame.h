@@ -159,6 +159,36 @@ public:
 		return w2s;
 	}
 
+	Vector3 clamp_norm_2d(const Vector3& v, float n_max) {
+		float vx = v.x, vy = v.y, vz = v.z;
+		float n = sqrt(pow(vx, 2.f) + pow(vz, 2.f));
+		float f = min(n, n_max) / n;
+		return Vector3(f * vx, vy, f * vz);
+	}
+
+	bool isLeft(const Vector2& a, const Vector2& b, const Vector2& c) {
+		return ((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)) > 0;
+	}
+
+	bool PointOnLineSegment(const Vector2& pt1, const Vector2& pt2, const Vector2& pt, double epsilon = 0.001)
+	{
+		if (pt.x - std::fmax(pt1.x, pt2.x) > epsilon ||
+			std::fmin(pt1.x, pt2.x) - pt.x > epsilon ||
+			pt.y - std::fmax(pt1.y, pt2.y) > epsilon ||
+			std::fmin(pt1.y, pt2.y) - pt.y > epsilon)
+			return false;
+
+		if (abs(pt2.x - pt1.x) < epsilon)
+			return abs(pt1.x - pt.x) < epsilon || abs(pt2.x - pt.x) < epsilon;
+		if (abs(pt2.y - pt1.y) < epsilon)
+			return abs(pt1.y - pt.y) < epsilon || abs(pt2.y - pt.y) < epsilon;
+
+		double x = pt1.x + (pt.y - pt1.y) * (pt2.x - pt1.x) / (pt2.y - pt1.y);
+		double y = pt1.y + (pt.x - pt1.x) * (pt2.y - pt1.y) / (pt2.x - pt1.x);
+
+		return abs(pt.x - x) < epsilon || abs(pt.y - y) < epsilon;
+	}
+
 	void PressKey(int key) {
 		Input::PressKey((HKey)key);
 	}
