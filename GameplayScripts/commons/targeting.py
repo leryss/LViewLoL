@@ -25,6 +25,9 @@ class TargetingConfig:
 	def get_target(self, game, range):
 		player = game.player
 		
+		if player.name == "practicetool_targetdummy":
+			return
+		
 		target_info = self.targets[self.selected]
 		target = self.find_target(game, game.champs, range, self.targeting_lambdas[target_info])
 		if not target:
