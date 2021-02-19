@@ -9,8 +9,8 @@ from champions import index
 
 lview_script_info = {
 	"script": "Evader",
-	"author": "https://github.com/bckd00r / bckd00r",
-	"description": "Evade module with lviewLoL"
+	"author": "anonymous developer",
+	"description": "Evade module with LviewLoL"
 }
 
 is_top = True
