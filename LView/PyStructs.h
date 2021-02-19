@@ -210,7 +210,11 @@ BOOST_PYTHON_MODULE(lview) {
 		.def("get_spell_info",              &PyGame::GetSpellInfo, return_value_policy<reference_existing_object>())
 		.def("linear_collision",            &PyGame::LinearCollision)
 		.def("hp_bar_pos",                  &PyGame::HpBarPos)
-										    
+
+		.def("clamp2d",  					&PyGame::clamp_norm_2d)
+		.def("is_left", 					&PyGame::isLeft)
+		.def("point_on_line", 				&PyGame::PointOnLineSegment)
+
 		.def("was_key_pressed",             &PyGame::WasKeyPressed)
 		.def("is_key_down",                 &PyGame::IsKeyDown)
 		.def("press_key",                   &PyGame::PressKey)
