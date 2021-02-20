@@ -44,20 +44,20 @@ def lview_update(game, ui):
 			b_is_skillshot = is_skillshot(skill.name)
 			skill_range = get_skillshot_range(game, skill.name) if b_is_skillshot else 1500.0
 			target = targeting.get_target(game, skill_range)
-			
-			if target:
-				if b_is_skillshot:
-					cast_point = castpoint_for_collision(game, skill, game.player, target)
-				else:
-					cast_point = target.pos
-					
-				if cast_point:
-					cast_point = game.world_to_screen(cast_point)
-					
-					old_cpos = game.get_cursor()
-					game.move_cursor(cast_point)
-					
-					skill.trigger()
-					
-					time.sleep(0.01)
-					game.move_cursor(old_cpos)
+			if skill.get_current_cooldown(game.time) == 0.0 and skill.level > 0:
+				if target:
+					if b_is_skillshot:
+						cast_point = castpoint_for_collision(game, skill, game.player, target)
+					else:
+						cast_point = target.pos
+
+					if cast_point:
+						cast_point = game.world_to_screen(cast_point)
+
+						old_cpos = game.get_cursor()
+						game.move_cursor(cast_point)
+
+						skill.trigger()
+
+						time.sleep(0.01)
+						game.move_cursor(old_cpos)

@@ -1,11 +1,26 @@
 from lview import *
 import math, itertools, time
 from . import items
+from enum import Enum
 
-Version = "experimental version"
+Version = "sdfjsdkfsd"
 MissileToSpell = {}
+SpellsToEvade = {}
 Spells         = {}
 ChampionSpells = {}
+
+class HitChance(Enum):
+	Immobile = 8
+	Dashing = 7
+	VeryHigh = 6
+	High = 5
+	Medium = 4
+	Low = 3
+	Impossible = 2
+	OutOfRange = 1
+	Collision = 0
+
+_HitChance = HitChance.Impossible
 
 class SFlag:
 	Targeted        = 1
@@ -22,27 +37,45 @@ class SFlag:
 	SkillshotLine    = CollideGeneric  | Line
 	
 class Spell:
-	def __init__(self, name, missile_names, flags, delay = 0.0, skills = []):
+	def __init__(self, name, missile_names, flags, delay = 0.0, danger = 1):
 		global MissileToSpell, Spells
 		
 		self.flags = flags
 		self.name = name
 		self.missiles = missile_names
 		self.delay = delay
-		self.skills = skills
+		self.danger = danger
 		Spells[name] = self
 		for missile in missile_names:
 			MissileToSpell[missile] = self
 			
 	delay    = 0.0
+	danger 	 = 1
 	flags    = 0
 	name     = "?"
 	missiles = []
 	skills = []
-	
+
+class DodgeSpell:
+	def __init__(self, name, slot):
+		global MissileToSpell, Spells
+		self.slot = slot
+		self.name = name
+	slot = "?"
+	name = "?"
+
+
 ChampionSpells = {
 	"aatrox": [
+		Spell("aatroxq1",                ["aatroxq1"],                               SFlag.CollideGeneric),
+		Spell("aatroxq",                [],                               SFlag.CollideGeneric),
 		Spell("aatroxw",                ["aatroxw"],                               SFlag.CollideGeneric)
+	],
+	"rell": [
+		Spell("rellq",                [],                               SFlag.CollideGeneric)
+	],
+	"quinn": [
+		Spell("quinnq",                ["quinnq"],                               SFlag.CollideGeneric)
 	],
 	"aurelionsol": [
 		Spell("aurelionsolq",           ["aurelionsolqmissile"],                   SFlag.SkillshotLine),
@@ -52,20 +85,35 @@ ChampionSpells = {
 		Spell("ahriorbofdeception",     ["ahriorbmissile"],                        SFlag.Line | SFlag.CollideWindwall),
 		Spell("ahriseduce",             ["ahriseducemissile"],                     SFlag.CollideGeneric)
 	],
-	"ashe": [                           
-		Spell("volleyattack",           ["volleyattack", "volleyattackwithsound"], SFlag.SkillshotLine),
-		Spell("enchantedcrystalarrow",  ["enchantedcrystalarrow"],                 SFlag.Line | SFlag.CollideWindwall | SFlag.CollideChampion)
+	"ashe": [
+		Spell("enchantedcrystalarrow",  ["enchantedcrystalarrow"],                 SFlag.Area | SFlag.Cone)
 	],
 	"shen": [                           
 		Spell("shene",           ["shene"], 			SFlag.Line)
 	],
+	"elise": [                           
+		Spell("elisehumane",           ["elisehumane"], 			SFlag.SkillshotLine)
+	],
+	"kennen": [                           
+		Spell("kennenshurikenhurlmissile1",           ["kennenshurikenhurlmissile1"], 			SFlag.SkillshotLine)
+	],
 	"darius": [                           
-		Spell("dariuscleave",           [], SFlag.Area | SFlag.CollideWindwall),
-		Spell("dariusaxegrabcone",      ["dariusaxegrabcone"], SFlag.SkillshotLine)
+		Spell("dariuscleave",           [],	SFlag.Area | SFlag.CollideWindwall),
+		Spell("dariusaxegrabcone",      ["dariusaxegrabcone"], SFlag.Cone | SFlag.CollideWindwall)
 	],
 	"brand": [
 		Spell("brandq",                 ["brandqmissile"],                         SFlag.SkillshotLine),
-		Spell("brandw",                 [],                                        SFlag.Area | SFlag.CollideWindwall)
+		Spell("brandw",                 [],                                        SFlag.Area | SFlag.CollideWindwall),
+		Spell("brand_.+_w.+tar_red",                 [],                                        SFlag.Area | SFlag.CollideWindwall)
+	],
+	"pyke": [
+		Spell("pykeqrange",                 ["pykeqrange"],                         SFlag.SkillshotLine),
+		Spell("pykee",                 ["pykee"],                                        SFlag.SkillshotLine),
+		Spell("pykessr",                 [],                                        SFlag.SkillshotLine),
+	],
+	"amumu": [
+		Spell("bandagetoss",                 ["sadmummybandagetoss"],                         SFlag.SkillshotLine),
+		Spell("curseofthesadmummy",                 [],                                        SFlag.Area)
 	],
 	"caitlyn": [
 		Spell("caitlynpiltoverpeacemaker", ["caitlynpiltoverpeacemaker", "caitlynpiltoverpeacemaker2"],          SFlag.Line | SFlag.CollideWindwall),
@@ -80,19 +128,25 @@ ChampionSpells = {
 		Spell("infectedcleavermissilecast", ["infectedcleavermissile"],            SFlag.SkillshotLine)
 	],
 	"diana": [
-		Spell("dianaq",                 ["dianaqinnermissile", "dianaqoutermissile"], SFlag.Area)
+		Spell("dianaq",                 ["dianaqinnermissile", "dianaqoutermissile"], 	SFlag.Cone),
+		Spell("dianaarcarc",                 ["dianaarcarc"], 	SFlag.Cone)
 	],
 	"ekko": [
 		Spell("ekkoq",                  ["ekkoqmis"],                              SFlag.Line | SFlag.CollideChampion),
-		Spell("ekkow",                  ["ekkowmis"],                              SFlag.Area, delay=3.0),
-		Spell("ekkor",                  ["ekkor"],                              SFlag.Area, delay=3.0)
+		Spell("ekkow",                  ["ekkowmis"],                              SFlag.Area, delay=0.0, danger=3),
+		Spell("ekkor",                  ["ekkor"],                              SFlag.Area, delay=0.0, danger=3)
+	],
+	"kogmaw": [
+		Spell("kogmawq",                  ["kogmawq"],                              SFlag.SkillshotLine | SFlag.CollideChampion),
+		Spell("kogmawvoidooze",                  ["kogmawvoidoozemissile"],                              SFlag.SkillshotLine | SFlag.CollideChampion),
+		Spell("kogmawlivingartillery",                  ["kogmawlivingartillery"],                              SFlag.Area)
 	],
 	"fizz": [
-		Spell("fizzr",                  ["fizzrmissile"],                          SFlag.Line | SFlag.CollideChampion | SFlag.CollideWindwall)
+		Spell("fizzr",                  ["fizzrmissile"],                          SFlag.Line | SFlag.CollideChampion | SFlag.CollideWindwall, delay=0.0, danger=3)
 	],
 	"irelia": [
 		Spell("ireliae",                ["ireliaemissile"],                        SFlag.Area),
-		Spell("ireliar",                ["ireliar"],                               SFlag.SkillshotLine)
+		Spell("ireliar",                ["ireliar"],                               SFlag.SkillshotLine, delay=0.0, danger=3)
 	],
 	"illaoi": [
 		Spell("illaoiq",                [],                                        SFlag.Area),
@@ -100,7 +154,8 @@ ChampionSpells = {
 	],
 	"jarvaniv": [
 		Spell("jarvanivdragonstrike",                [],                        SFlag.SkillshotLine),
-		Spell("jarvanivqe", [],                                       SFlag.Line | SFlag.CollideChampion | SFlag.CollideWindwall)
+		Spell("jarvaniveq", [],                                       SFlag.SkillshotLine),
+		Spell("jarvanivdemacianstandard", [],                                       SFlag.Area)
 	],
 	"janna": [
 		Spell("jannaq",                ["howlinggalespell"],                        SFlag.SkillshotLine)
@@ -112,27 +167,32 @@ ChampionSpells = {
 	"ezreal": [                         
 		Spell("ezrealq",                ["ezrealq"],                               SFlag.Line),
 		Spell("ezrealw",                ["ezrealw"],                               SFlag.Line),
-		Spell("ezrealr",                ["ezrealr"],                               SFlag.Line)
+		Spell("ezrealr",                ["ezrealr"],                               SFlag.Line, delay=0.0, danger=2)
 	],
 	"kalista": [                         
 		Spell("kalistamysticshot",                ["kalistamysticshotmis"],                               SFlag.SkillshotLine),
 	],
+	"lissandra": [                         
+		Spell("lissandraq",                ["lissandraqmissile"],                               SFlag.SkillshotLine),
+		Spell("lissandraqshards",                ["lissandraqshards"],                               SFlag.SkillshotLine),
+		Spell("lissandrae",                ["lissandraemissile"],                               SFlag.SkillshotLine),
+	],
 	"galio": [
-		Spell("galioq", [], SFlag.Area, delay=0.2),
-		Spell("galioe", ["galioe"], SFlag.SkillshotLine, delay=0.3),
-		Spell("galior", ["galiormissile"], SFlag.Area)
+		Spell("galioq", 					[], 							SFlag.Area),
+		Spell("galioe", 					[], 							SFlag.SkillshotLine)
 	],
 	"evelynn": [
-		Spell("evelynnq",               ["evelynnq"],                              SFlag.SkillshotLine)
+		Spell("evelynnq",               ["evelynnq"],                              SFlag.SkillshotLine),
+		Spell("evelynnr",               ["evelynnr"],                              SFlag.Cone)
 	],
 	"graves": [                         
 		Spell("gravesqlinespell",       ["gravesqlinemis", "gravesqreturn"],       SFlag.Line | SFlag.CollideChampion | SFlag.CollideWindwall),
 		Spell("gravessmokegrenade",     ["gravessmokegrenadeboom"],                SFlag.Area | SFlag.CollideWindwall),
 		Spell("graveschargeshot",       ["graveschargeshotshot"],                  SFlag.Line | SFlag.CollideWindwall),
-		Spell("graveschargeshotfxmissile2",       ["graveschargeshotfxmissile2"],                  SFlag.Line | SFlag.CollideWindwall)
+		Spell("graveschargeshotfxmissile2",       ["graveschargeshotfxmissile2"],                  SFlag.Cone)
 	],
 	"twistedfate": [                    
-		Spell("wildcards",              ["sealfatemissile"],                       SFlag.CollideWindwall | SFlag.Line)
+		Spell("wildcards",              ["sealfatemissile"],                       SFlag.Cone)
 	],
 	"leesin": [                         
 		Spell("blindmonkqone",          ["blindmonkqone"],                         SFlag.SkillshotLine)
@@ -151,8 +211,14 @@ ChampionSpells = {
 		Spell("lucianq",                ["lucianq"],                          SFlag.SkillshotLine, delay=0.4),
 		Spell("lucianw",                ["lucianwmissile"],                          SFlag.SkillshotLine)
 	],
+	"gragas": [
+		Spell("gragasq",                ["gragasqmissile"],                          SFlag.Area),
+		Spell("gragase",                ["gragase"],                          SFlag.SkillshotLine),
+		Spell("gragasr",                [],                          SFlag.Area, delay=0.0, danger=3),
+		Spell("gragasrfow",                ["gragasrboom"],                          SFlag.Area)
+	],
 	"tristana": [
-		Spell("tristanaw",                ["tristanaw"],                          SFlag.Area | SFlag.CollideWindwall)
+		Spell("tristanaw",                ["rocketjump"],                          SFlag.Area | SFlag.CollideWindwall)
 	],
 	"rengar": [
 		Spell("rengare",                ["rengaremis"],                            SFlag.SkillshotLine),
@@ -164,15 +230,20 @@ ChampionSpells = {
 	"blitzcrank": [
 		Spell("rocketgrab",           ["rocketgrabmissile"],                                 SFlag.SkillshotLine),
 	],
+	"corki": [
+		Spell("phosphorusbomb",           ["phosphorusbombmissile"],                                 SFlag.Area),
+		Spell("missilebarrage",           ["missilebarragemissile"],                                 SFlag.SkillshotLine),
+		Spell("missilebarrage2",           ["missilebarragemissile2"],                                 SFlag.SkillshotLine),
+	],
 	"varus": [
 		Spell("varusq",                 ["varusqmissile"],                         SFlag.Line | SFlag.CollideWindwall),
 		Spell("varuse",                 ["varusemissile"],                         SFlag.Area),
-		Spell("varusr",                 ["varusrmissile"],                         SFlag.Line | SFlag.CollideChampion | SFlag.CollideWindwall)
+		Spell("varusr",                 ["varusrmissile"],                         SFlag.Line | SFlag.CollideChampion | SFlag.CollideWindwall, delay=0.0, danger=3)
 	],
 	"veigar": [                         
 		Spell("veigarbalefulstrike",    ["veigarbalefulstrikemis"],                SFlag.SkillshotLine),
-		Spell("veigardarkmatter",       [],                                        SFlag.Area, delay=1.0),
-		Spell("veigareventhorizon",     [],                                        SFlag.Area, delay=0.5)
+		Spell("veigardarkmatter",       [],                                        SFlag.Area),
+		Spell("veigareventhorizon",     [],                                        SFlag.Area)
 	],
 	"velkoz": [
 		Spell("velkozq",                 ["velkozqmissile"],                         SFlag.Line | SFlag.CollideWindwall),
@@ -182,12 +253,15 @@ ChampionSpells = {
 		Spell("velkoze",                 					["velkozemissile"],                         SFlag.Area)
 	],
 	"lux": [                            
-		Spell("luxlightbinding",        ["luxlightbindingmis"],                    SFlag.Line),
-		Spell("luxlightstrikekugel",    ["luxlightstrikekugel"],                   SFlag.Area | SFlag.CollideWindwall),
-		Spell("luxmalicecannonmis",        ["luxrvfxmis"],                       SFlag.Line),
-		],
+		Spell("luxlightbinding",        ["luxlightbindingmis"],                    SFlag.SkillshotLine),
+		Spell("luxlightstrikekugel",    ["luxlightstrikekugel"],                   SFlag.Area),
+		Spell("luxmalicecannonmis",        ["luxrvfxmis"],                       SFlag.CollideGeneric),
+	],
 	"nautilus": [                            
 		Spell("nautilusanchordragmissile",        ["nautilusanchordragmissile"],                    SFlag.SkillshotLine)
+	],
+	"malzahar": [                            
+		Spell("malzaharq",        ["malzaharq"],                    SFlag.SkillshotLine)
 	],
 	"ziggs": [                          
 		Spell("ziggsq",                  ["ziggsqspell", "ziggsqspell2", "ziggsqspell3"],                              SFlag.Area | SFlag.CollideWindwall),
@@ -196,12 +270,12 @@ ChampionSpells = {
 		Spell("ziggsr",                 ["ziggsrboom", "ziggsrboommedium", "ziggsrboomlong", "ziggsrboomextralong"],  SFlag.Area),
 	],
 	"jhin": [                           
-		Spell("jhinw",                  ["jhinw"],                                 SFlag.Line | SFlag.CollideChampion | SFlag.CollideWindwall, delay=0.5),
+		Spell("jhinw",                  ["jhinwmissile"],                                 SFlag.Line | SFlag.CollideChampion | SFlag.CollideWindwall, delay=0.5),
 		Spell("jhine",                  ["jhinetrap"],                             SFlag.Area | SFlag.CollideWindwall),
 		Spell("jhinrshot",              ["jhinrshotmis", "jhinrshotmis4"],         SFlag.Line | SFlag.CollideWindwall | SFlag.CollideChampion)
 	],
 	"swain": [                           
-		Spell("swainw",                  [],                                 SFlag.Area | SFlag.CollideWindwall),
+		Spell("swainw",                  [],                                 SFlag.Area),
 		Spell("swaine",                  ["swaine"],                             SFlag.SkillshotLine),
 		Spell("swainereturn",              ["swainereturnmissile"],         SFlag.SkillshotLine)
 	],
@@ -217,26 +291,28 @@ ChampionSpells = {
 		Spell("bushwhack",              [],                                        SFlag.Area)
 	],
 	"malphite": [
-		Spell("ufslash",                [],                                        SFlag.Area | SFlag.CollideChampion)
+		Spell("ufslash",                [],                                        SFlag.Cone)
 	],
 	"reksai": [
 		Spell("reksaiqburrowed",                ["reksaiqburrowedmis"],                                        SFlag.SkillshotLine)
 	],
 	"thresh": [
-		Spell("threshq",                ["threshqmissile"],                        SFlag.SkillshotLine),
-		Spell("threshw",                ["threshwlanternout"],                     SFlag.Area | SFlag.CollideWindwall)
+		Spell("threshq",                ["threshqmissile"],                        SFlag.SkillshotLine)
 	],
 	"morgana": [                        
 		Spell("morganaq",               ["morganaq"],                              SFlag.SkillshotLine),
-		Spell("morganaw",               [""],                       SFlag.Area, delay=0.95)
+		Spell("morganaw",               [],                       SFlag.Area, delay=0.95)
+	],
+	"mordekaiser": [                        
+		Spell("mordekaiserq",               [],                              SFlag.SkillshotLine),
+		Spell("mordekaisere",               [],                       SFlag.SkillshotLine)
+	],
+	"missfortune": [                        
+		Spell("missfortunericochetshot",               ["missfortunericochetshot"],                              SFlag.Cone)
 	],
 	"samira": [                        
 		Spell("samiraqgun",               ["samiraqgun"],                              SFlag.SkillshotLine),
 	],
-	"missfortune": [
-		Spell("missfortunescattershot", [],                                        SFlag.Area, delay=0.25),
-		Spell("missfortunebullettime",  ["missfortunebullets"],                    SFlag.Line | SFlag.CollideWindwall)
-	],   
 	"pantheon": [
 		Spell("pantheonq",              ["pantheonqmissile"],                      SFlag.Line | SFlag.CollideWindwall),
 		Spell("pantheonr",              ["pantheonrmissile"],                      SFlag.Area)
@@ -245,13 +321,17 @@ ChampionSpells = {
 		Spell("anniew",                 [],                                        SFlag.Cone | SFlag.CollideWindwall),
 		Spell("annier",                 [],                                        SFlag.Area)
 	],
+	"hecarim": [                                                                     
+		Spell("hecarimr",                 ["hecarimultmissile"],                                        SFlag.SkillshotLine),
+		Spell("hecarimrcircle",                 [],                                        SFlag.Area)
+	],
 	"olaf": [
 		Spell("olafaxethrowcast",       ["olafaxethrow"],                          SFlag.Line | SFlag.CollideWindwall)
 	],
 	"anivia": [
 		Spell("flashfrost",             ["flashfrostspell"],                       SFlag.Line | SFlag.CollideWindwall),
-		Spell("crystallize",            [],                                        SFlag.Area, delay=0.25),
-		Spell("glacialstorm",           [],                                        SFlag.Area)
+		Spell("aniviar",            [],                                        SFlag.Area, delay=0.25),
+		Spell("aniviar2",           [],                                        SFlag.Area)
 	],
 	"zed": [
 		Spell("zedq",       ["zedqmissile"],                          SFlag.Line)
@@ -259,7 +339,7 @@ ChampionSpells = {
 	"xerath": [
 		Spell("xeratharcanopulse",             [],                       SFlag.SkillshotLine),
 		Spell("xeratharcanebarrage2",            ["xeratharcanebarrage2"],                                        SFlag.Area),
-		Spell("xerathmagespear",           ["xerathmagespearmissile"],                                        SFlag.Area),
+		Spell("xerathmagespear",           ["xerathmagespearmissile"],                                        SFlag.SkillshotLine),
 		Spell("xerathrmissilewrapper",           ["xerathlocuspulse"],                                        SFlag.Area),
 	],
 	"urgot": [
@@ -279,10 +359,18 @@ ChampionSpells = {
 		Spell("megaadhesive",           ["singedwparticlemissile"],                SFlag.Area)
 	],
 	"sivir": [
-		Spell("sivirq",                 ["sivirqmissile"],                         SFlag.Line | SFlag.CollideWindwall)
+		Spell("sivirq",                 ["sivirqmissile"],                         SFlag.Cone)
 	],
 	"kaisa": [
 		Spell("kaisaw",                 ["kaisaw"],                         SFlag.Line | SFlag.CollideWindwall)
+	],
+	"karma": [
+		Spell("karmaq",                 ["karmaqmissile"],                         SFlag.Line | SFlag.CollideWindwall),
+		Spell("karmaqmantracircle",                 [],                         SFlag.Line | SFlag.CollideWindwall)
+	],
+	"braum": [
+		Spell("braumq",                 ["braumqmissile"],                         SFlag.SkillshotLine),
+		Spell("braumrwrapper",                 ["braumrmissile"],                         SFlag.SkillshotLine)
 	],
 	"soraka": [
 		Spell("sorakaq",                ["sorakaqmissile"],                        SFlag.Area),
@@ -305,7 +393,14 @@ ChampionSpells = {
 		Spell("kayleq",                 ["kayleqmis"],                             SFlag.SkillshotLine)
 	],
 	"yasuo": [
-		Spell("yasuoq3",                 ["yasuoq3mis"],                             SFlag.SkillshotLine, delay=0.25)
+		Spell("yasuoq",                  [],                             SFlag.Line | SFlag.CollideWindwall),
+		Spell("yasuoq2",                 [],                             SFlag.Line | SFlag.CollideWindwall),
+		Spell("yasuoq3",                 ["yasuoq3mis"],                             SFlag.SkillshotLine)
+	],
+	"yone": [
+		Spell("yoneq",                 [],                             SFlag.SkillshotLine),
+		Spell("yoneq3",                 [],                             SFlag.SkillshotLine),
+		Spell("yoner",                 [],                             SFlag.SkillshotLine)
 	],
 	"zac": [
 		Spell("zacq",                   ["zacqmissile"],                           SFlag.SkillshotLine),
@@ -315,7 +410,7 @@ ChampionSpells = {
 		Spell("zyraq",                  ["zyraq"],                                        SFlag.SkillshotLine),
 		Spell("zyraw",                  [],                                        SFlag.Area),
 		Spell("zyrae",                  ["zyrae"],                                 SFlag.SkillshotLine),
-		Spell("zyrar",                  [],                                         SFlag.Line | SFlag.Area | SFlag.CollideChampion | SFlag.CollideWindwall),
+		Spell("zyrar",                  ["zyrar"],                                         SFlag.Area | SFlag.CollideChampion | SFlag.CollideWindwall),
 		Spell("zyrapassivedeathmanager",                  ["zyrapassivedeathmanager"],                                        SFlag.SkillshotLine)
 	],
 	"zilean": [
@@ -325,7 +420,8 @@ ChampionSpells = {
 		Spell("orianaizunacommand",     ["orianaizuna"],                           SFlag.Line | SFlag.Area | SFlag.CollideWindwall)
 	],
 	"warwick": [
-		Spell("warwickr",               [],                                        SFlag.Area | SFlag.CollideChampion)
+		Spell("warwickr",               [],                                        SFlag.Area | SFlag.CollideChampion),
+		Spell("warwickrchannel",               [],                                        SFlag.Area | SFlag.CollideChampion)
 	],
 	"taric": [
 		Spell("tarice", 			["tarice"], 			SFlag.SkillshotLine, delay=0.1)
@@ -341,23 +437,47 @@ ChampionSpells = {
 		Spell("syndraqe", 			["syndrae"], 			SFlag.Area)
 	],
 	"draven": [
-		Spell("dravendoubleshot", 			["dravendoubleshotmissile"], 			SFlag.SkillshotLine, delay=0.25),
-		Spell("dravenrcast", 			["dravenr"], 			SFlag.SkillshotLine, delay=0.4),
+		Spell("dravendoubleshot", 			["dravendoubleshotmissile"], 			SFlag.SkillshotLine),
+		Spell("dravenrcast", 			["dravenr"], 			SFlag.SkillshotLine)
 	],
 	"kayn": [
 		Spell("kaynw", 			[], 			SFlag.SkillshotLine),
 		Spell("kaynassw", 			[], 			SFlag.SkillshotLine),
 	],
 	"jinx": [
+		Spell("jinxw", 			["jinxw"], 			SFlag.SkillshotLine),
 		Spell("jinxwmissile", 			["jinxwmissile"], 			SFlag.SkillshotLine),
-		Spell("jinxr", 			["jinxr"], 			SFlag.SkillshotLine),
+		Spell("jinxr", 			["jinxr"], 			SFlag.SkillshotLine)
+	],
+	"cassiopeia": [
+		Spell("cassiopeiaq", 			["cassiopeiaq"], 			SFlag.Area),
+		Spell("cassiopeir", 			["cassiopeiar"], 			SFlag.Cone),
 	],
 	"seraphine": [
-		Spell("seraphineq", 			[], 			SFlag.Area),
+		Spell("seraphineq", 			["seraphineqinitialmissile"], 			SFlag.Area | SFlag.CollideWindwall),
 		Spell("seraphineecast", 			["seraphineemissile"], 			SFlag.SkillshotLine),
-		Spell("seraphiner", 			["seraphiner"], 			SFlag.SkillshotLine),
-		Spell("seraphinerfow", 			[], 			SFlag.SkillshotLine),
+		Spell("seraphiner", 			["seraphiner"], 			SFlag.SkillshotLine | SFlag.CollideWindwall),
+		Spell("seraphinerfow", 			[], 			SFlag.SkillshotLine | SFlag.CollideWindwall),
 	],
+	"lulu": [
+		Spell("luluq", 			["luluqmissile"], 			SFlag.SkillshotLine),
+		Spell("luluqpix", 			["luluqmissiletwo"], 			SFlag.SkillshotLine)
+	],
+	"neeko": [
+		Spell("neekoq", 			["neekoq"], 			SFlag.Area),
+		Spell("neekoe", 			["neekoe"], 			SFlag.Line | SFlag.CollideWindwall)
+	],
+	"allchampions": [
+		Spell("6656cast", 			[], 			SFlag.SkillshotLine)
+	],
+	"lillia": [
+		Spell("lilliaw", 			[], 			SFlag.Area | SFlag.CollideWindwall),
+		Spell("lilliae", 			["lilliae"], 			SFlag.SkillshotLine),
+		Spell("lilliae2", 			["lilliaerollingmissile"], 			SFlag.SkillshotLine)
+	],
+	"tahmkench": [
+		Spell("tahmkenchq", 			["tahmkenchqmissile"], 			SFlag.SkillshotLine)
+	]
 }
 
 def draw_prediction_info(game, ui):
@@ -427,11 +547,9 @@ def is_last_hitable(game, player, enemy):
 
 	return hp - hit_dmg <= 0
 	
-# Returns a point where the mouse should click to cast a spells taking into account the targets movement speed
 def castpoint_for_collision(game, spell, caster, target):
 	global Spells
 
-	print('predicted')
 	if spell.name not in Spells:
 		return None
 	
@@ -446,8 +564,7 @@ def castpoint_for_collision(game, spell, caster, target):
 	if missile.travel_time > 0.0:
 		t_missile = missile.travel_time
 	else:
-		t_missile = (missile.cast_range / missile.speed) if len(spell_extra.missiles) > 0 and missile.speed > 0.0 else 0.0
-			
+		t_missile = (missile.cast_range / missile.speed) if len(spell_extra.missiles) > 0 and missile.speed > 0.0 else 0.0		
 	# Get direction of target
 	target_dir = target.pos.sub(target.prev_pos).normalize()
 	if math.isnan(target_dir.x):
@@ -464,17 +581,16 @@ def castpoint_for_collision(game, spell, caster, target):
 		iterations = int(missile.cast_range/30.0)
 		step = t_missile/iterations
 		
-		last_dist = 9999999
-		last_target_pos = None
+
+		last_dist = 99999999
+		last_target_pos = target.pos
 		for i in range(iterations):
 			t = i*step
 			target_future_pos = target.pos.add(target_dir.scale((t_delay + t)*target.movement_speed))
 			spell_dir = target_future_pos.sub(caster.pos).normalize().scale(t*missile.speed)
 			spell_future_pos = caster.pos.add(spell_dir)
-			
 			dist = target_future_pos.distance(spell_future_pos)
-			#print(dist)
-			if dist < missile.width/2.0:
+			if dist < missile.width / 2.0:
 				return target_future_pos
 			elif dist > last_dist:
 				return last_target_pos
@@ -489,4 +605,51 @@ def castpoint_for_collision(game, spell, caster, target):
 		return target.pos.add(target_dir.scale((t_delay + t_missile)*target.movement_speed))
 	else:
 		return target.pos
-		
+
+def getEvadePos(game, start_pos, end_pos, current, br, missile, spell):
+	# spell_extra = Spells[spell.name]
+	# if len(spell_extra.missiles) > 0:
+	# 	missile = game.get_spell_info(spell_extra.missiles[0])
+	# else:
+	# 	missile = spell
+
+	# t_delay = spell.delay + spell_extra.delay
+	# if missile.travel_time > 0.0:
+	# 	t_missile = missile.travel_time
+	# else:
+	# 	t_missile = (missile.cast_range / missile.speed) if len(spell_extra.missiles) > 0 and missile.speed > 0.0 else 0.0		
+	
+	
+	direction = end_pos.sub(start_pos)
+	pos3 = end_pos.add(Vec3(direction.z * -float(1.0), direction.y, direction.x * float(1.0)))
+	pos4 = end_pos.add(Vec3(direction.z * float(1.0), direction.y, direction.x * -float(1.0)))
+	
+	direction2 = pos3.sub(pos4)
+	direction2 = game.clamp2d(direction2, br)
+	direction3 = Vec3(0, 0, 0)
+	
+	direction3.x = -direction2.x 
+	direction3.y = -direction2.y
+	direction3.z = -direction2.z
+	
+	# player_dir = game.player.pos.sub(game.player.prev_pos).normalize()
+	# if math.isnan(player_dir.x):
+	# 	player_dir.x = 0.0
+	# if math.isnan(player_dir.y):
+	# 	player_dir.y = 0.0
+	# if math.isnan(player_dir.z):
+	# 	player_dir.z = 0.0
+	
+	# iterations = int(missile.cast_range/30.0)
+	# step = t_missile/iterations
+
+	# for i in range(iterations):
+	# 	t = i*step
+	# 	if game.is_left(game.world_to_screen(start_pos), game.world_to_screen(end_pos), game.world_to_screen(current)):
+	# 		return current.add(direction3.add(player_dir.scale((t_delay + t)*game.player.movement_speed)))
+	# 	else:
+	# 		return current.add(direction2.add(player_dir.scale((t_delay + t)*game.player.movement_speed)))
+	if game.is_left(game.world_to_screen(start_pos), game.world_to_screen(end_pos), game.world_to_screen(current)):
+		return current.add(direction3)
+	else:
+		return current.add(direction2)
